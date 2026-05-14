@@ -267,8 +267,10 @@ function App() {
       }
       const state = useEditorStore.getState()
       const containerWidth = containerRef.current?.clientWidth ?? 800
+      const sidebarWidth = 192
+      const waveformWidth = containerWidth - sidebarWidth
       const maxDuration = Math.max(...state.tracks.filter(t => t.buffer).map(t => t.buffer!.duration), 1)
-      const newZoom = Math.min(500, Math.max(20, (containerWidth - 20) / maxDuration))
+      const newZoom = Math.min(500, Math.max(20, (waveformWidth - 20) / maxDuration))
       dispatch({ type: 'SET_ZOOM', payload: newZoom })
       dispatch({ type: 'SET_SCROLL', payload: { x: 0 } })
     }
@@ -413,9 +415,11 @@ function App() {
     const state = useEditorStore.getState()
     if (!state.selection) return
     const containerWidth = document.querySelector('[data-track-container]')?.clientWidth ?? 800
+    const sidebarWidth = 192
+    const waveformWidth = containerWidth - sidebarWidth
     const selDuration = state.selection.end - state.selection.start
     if (selDuration <= 0) return
-    const newZoom = containerWidth / selDuration
+    const newZoom = waveformWidth / selDuration
     dispatch({ type: 'SET_ZOOM', payload: Math.min(500, Math.max(20, newZoom)) })
     dispatch({ type: 'SET_SCROLL', payload: { x: state.selection.start * newZoom } })
   }
@@ -423,7 +427,9 @@ function App() {
   const handleFitToWindow = () => {
     const maxDuration = Math.max(...tracks.filter(t => t.buffer).map(t => t.buffer!.duration), 1)
     const containerWidth = document.querySelector('[data-track-container]')?.clientWidth ?? 800
-    const newZoom = (containerWidth - 20) / maxDuration
+    const sidebarWidth = 192
+    const waveformWidth = containerWidth - sidebarWidth
+    const newZoom = (waveformWidth - 20) / maxDuration
     dispatch({ type: 'SET_ZOOM', payload: Math.min(500, Math.max(20, newZoom)) })
     dispatch({ type: 'SET_SCROLL', payload: { x: 0 } })
   }

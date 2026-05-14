@@ -17,8 +17,7 @@ export function TransportBar() {
 
   const handleStop = () => {
     audioEngine.stopAll()
-    dispatch({ type: 'SET_TRANSPORT', payload: { isPlaying: false, isPaused: false, position: 0 } })
-    dispatch({ type: 'SET_CURSOR', payload: 0 })
+    dispatch({ type: 'SET_TRANSPORT', payload: { isPlaying: false, isPaused: false } })
   }
 
   const handleRewind = () => {

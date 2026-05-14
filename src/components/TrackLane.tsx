@@ -19,10 +19,13 @@ export function TrackLane({ track, isSelected }: TrackLaneProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
   const menuRef = useRef<HTMLDivElement>(null)
-  const { zoom, scrollX, selection, cursorPosition, viewMode, dispatch, tracks, clipboard, selectedTrack } = useEditorStore()
+  const { zoom, scrollX, selection, cursorPosition, viewMode, dispatch, tracks, clipboard, selectedTrack, transport } = useEditorStore()
   const [isDragging, setIsDragging] = useState(false)
   const [dragStart, setDragStart] = useState(0)
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null)
+  const isResizing = useRef(false)
+  const resizeStartY = useRef(0)
+  const resizeStartHeight = useRef(0)
 
   const draw = useCallback(() => {
     const canvas = canvasRef.current
@@ -117,6 +120,11 @@ export function TrackLane({ track, isSelected }: TrackLaneProps) {
     setDragStart(time)
     dispatch({ type: 'SET_SELECTION', payload: null })
     dispatch({ type: 'SET_CURSOR', payload: time })
+
+    if (transport.isPlaying) {
+      audioEngine.stopAll()
+      audioEngine.play(tracks, time)
+    }
   }
 
   const handleMouseMove = (e: React.MouseEvent) => {
@@ -156,6 +164,30 @@ export function TrackLane({ track, isSelected }: TrackLaneProps) {
     if (menuX + 200 > window.innerWidth) menuX = window.innerWidth - 210
     if (menuY + 300 > window.innerHeight) menuY = window.innerHeight - 310
     setContextMenu({ x: menuX, y: menuY })
+  }
+
+  const handleResizeMouseDown = (e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    isResizing.current = true
+    resizeStartY.current = e.clientY
+    resizeStartHeight.current = track.height
+
+    const handleMouseMove = (ev: MouseEvent) => {
+      if (!isResizing.current) return
+      const delta = ev.clientY - resizeStartY.current
+      const newHeight = Math.max(60, Math.min(600, resizeStartHeight.current + delta))
+      dispatch({ type: 'UPDATE_TRACK', payload: { id: track.id, changes: { height: newHeight } } })
+    }
+
+    const handleMouseUp = () => {
+      isResizing.current = false
+      window.removeEventListener('mousemove', handleMouseMove)
+      window.removeEventListener('mouseup', handleMouseUp)
+    }
+
+    window.addEventListener('mousemove', handleMouseMove)
+    window.addEventListener('mouseup', handleMouseUp)
   }
 
   useEffect(() => {
@@ -222,8 +254,8 @@ export function TrackLane({ track, isSelected }: TrackLaneProps) {
   const hasClipboard = !!currentState.clipboard
 
   return (
-    <div className={`flex border-b border-surface-50/30 ${isSelected ? 'bg-surface-200/50' : ''}`}>
-      <div className="w-48 flex-shrink-0 bg-surface-300 border-r border-surface-50/30 flex flex-col p-2 gap-1">
+    <div className={`flex relative border-b border-surface-50/30 ${isSelected ? 'bg-surface-200/50' : ''}`} style={{ height: track.height }}>
+      <div className="w-48 flex-shrink-0 bg-surface-300 border-r border-surface-50/30 flex flex-col p-2 gap-1 overflow-hidden">
         <div className="flex items-center gap-1">
           <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: track.color }} />
           <input
@@ -285,13 +317,16 @@ export function TrackLane({ track, isSelected }: TrackLaneProps) {
       <div
         ref={containerRef}
         className="flex-1 relative cursor-crosshair"
-        style={{ height: track.height }}
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
         onContextMenu={handleContextMenu}
       >
         <canvas ref={canvasRef} className="absolute inset-0 w-full h-full" />
       </div>
+      <div
+        className="absolute bottom-0 left-0 right-0 h-2 cursor-row-resize hover:bg-accent/30 z-10"
+        onMouseDown={handleResizeMouseDown}
+      />
 
       {contextMenu && createPortal(
         <div

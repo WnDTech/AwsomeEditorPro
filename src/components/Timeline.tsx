@@ -140,13 +140,16 @@ export function Timeline() {
   }, [])
 
   return (
-    <canvas
-      ref={canvasRef}
-      className="w-full h-6 cursor-pointer"
-      onMouseDown={handleMouseDown}
-      onMouseMove={handleMouseMove}
-      onMouseUp={handleMouseUp}
-    />
+    <div className="flex w-full">
+      <div className="w-48 flex-shrink-0 bg-surface-300 border-r border-surface-50/30" />
+      <canvas
+        ref={canvasRef}
+        className="flex-1 h-6 cursor-pointer"
+        onMouseDown={handleMouseDown}
+        onMouseMove={handleMouseMove}
+        onMouseUp={handleMouseUp}
+      />
+    </div>
   )
 }
 
