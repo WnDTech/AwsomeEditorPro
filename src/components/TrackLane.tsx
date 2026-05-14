@@ -2,7 +2,7 @@ import { useRef, useEffect, useCallback, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useEditorStore } from '../store/editorStore'
 import { audioEngine } from '../audio/AudioEngine'
-import { extractRegion, insertRegion, deleteRegion } from '../audio/AudioEffects'
+import { clipboardCopy, clipboardCut, clipboardPaste, clipboardDelete, selectAll } from '../hooks/useClipboard'
 import { AudioTrack } from '../types'
 
 interface TrackLaneProps {
@@ -188,59 +188,27 @@ export function TrackLane({ track, isSelected }: TrackLaneProps) {
   }
 
   const handleCtxCopy = () => {
-    const sel = useEditorStore.getState().selection
-    if (!sel || sel.trackId !== track.id) return
-    if (!track.buffer) return
-    const sr = track.buffer.sampleRate
-    const startSample = Math.floor(sel.start * sr)
-    const endSample = Math.floor(sel.end * sr)
-    const region = extractRegion(track.buffer, startSample, endSample)
-    dispatch({ type: 'SET_CLIPBOARD', payload: region })
+    clipboardCopy()
     setContextMenu(null)
   }
 
   const handleCtxCut = () => {
-    const sel = useEditorStore.getState().selection
-    if (!sel || sel.trackId !== track.id || !track.buffer) return
-    const sr = track.buffer.sampleRate
-    const startSample = Math.floor(sel.start * sr)
-    const endSample = Math.floor(sel.end * sr)
-    const region = extractRegion(track.buffer, startSample, endSample)
-    dispatch({ type: 'SET_CLIPBOARD', payload: region })
-    const newBuffer = deleteRegion(track.buffer, startSample, endSample)
-    dispatch({ type: 'PUSH_UNDO', payload: 'Cut' })
-    dispatch({ type: 'SET_TRACK_BUFFER', payload: { id: track.id, buffer: newBuffer } })
-    dispatch({ type: 'SET_SELECTION', payload: null })
+    clipboardCut()
     setContextMenu(null)
   }
 
   const handleCtxPaste = () => {
-    const cb = useEditorStore.getState().clipboard
-    const cur = useEditorStore.getState().cursorPosition
-    if (!cb || !track.buffer) return
-    const insertSample = Math.floor(cur * track.buffer.sampleRate)
-    const newBuffer = insertRegion(track.buffer, cb, insertSample)
-    dispatch({ type: 'PUSH_UNDO', payload: 'Paste' })
-    dispatch({ type: 'SET_TRACK_BUFFER', payload: { id: track.id, buffer: newBuffer } })
+    clipboardPaste()
     setContextMenu(null)
   }
 
   const handleCtxDelete = () => {
-    const sel = useEditorStore.getState().selection
-    if (!sel || sel.trackId !== track.id || !track.buffer) return
-    const sr = track.buffer.sampleRate
-    const startSample = Math.floor(sel.start * sr)
-    const endSample = Math.floor(sel.end * sr)
-    const newBuffer = deleteRegion(track.buffer, startSample, endSample)
-    dispatch({ type: 'PUSH_UNDO', payload: 'Delete' })
-    dispatch({ type: 'SET_TRACK_BUFFER', payload: { id: track.id, buffer: newBuffer } })
-    dispatch({ type: 'SET_SELECTION', payload: null })
+    clipboardDelete()
     setContextMenu(null)
   }
 
   const handleCtxSelectAll = () => {
-    if (!track.buffer) return
-    dispatch({ type: 'SET_SELECTION', payload: { start: 0, end: track.buffer.duration, trackId: track.id } })
+    selectAll()
     setContextMenu(null)
   }
 

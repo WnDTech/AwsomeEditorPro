@@ -20,7 +20,8 @@ import { audioEngine } from './audio/AudioEngine'
 import { readAudioFile, downloadWav } from './audio/AudioFileIO'
 import { createTrack } from './store/editorStore'
 import { applyEffectToSelection, applyGenerate } from './hooks/useAudioEngine'
-import { extractRegion, insertRegion, deleteRegion } from './audio/AudioEffects'
+import { clipboardCopy, clipboardCut, clipboardPaste, clipboardDelete, selectAll } from './hooks/useClipboard'
+import { extractRegion } from './audio/AudioEffects'
 import { generateId } from './utils/helpers'
 
 function App() {
@@ -35,6 +36,32 @@ function App() {
       state.dispatch({ type: 'SET_TRANSPORT', payload: { position: pos } })
       state.dispatch({ type: 'SET_CURSOR', payload: pos })
     })
+  }, [])
+
+  useEffect(() => {
+    const el = containerRef.current
+    if (!el) return
+    const handleWheel = (e: WheelEvent) => {
+      if (e.ctrlKey || e.metaKey) {
+        e.preventDefault()
+        const state = useEditorStore.getState()
+        const zoomDelta = e.deltaY > 0 ? 0.9 : 1.1
+        const newZoom = Math.min(500, Math.max(20, Math.round(state.zoom * zoomDelta)))
+        state.dispatch({ type: 'SET_ZOOM', payload: newZoom })
+      } else {
+        const el2 = containerRef.current
+        if (el2 && el2.scrollHeight > el2.clientHeight + 2 && !e.shiftKey) {
+          return
+        }
+        e.preventDefault()
+        const state = useEditorStore.getState()
+        const delta = Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY
+        const newScrollX = Math.max(0, state.scrollX + delta)
+        state.dispatch({ type: 'SET_SCROLL', payload: { x: newScrollX } })
+      }
+    }
+    el.addEventListener('wheel', handleWheel, { passive: false })
+    return () => el.removeEventListener('wheel', handleWheel)
   }, [])
 
   useEffect(() => {
@@ -231,12 +258,19 @@ function App() {
       for (const file of Array.from(input.files)) {
         try {
           const { buffer, name } = await readAudioFile(file)
-          const track = createTrack(tracks, buffer, name.replace(/\.[^/.]+$/, ''))
+          const currentTracks = useEditorStore.getState().tracks
+          const track = createTrack(currentTracks, buffer, name.replace(/\.[^/.]+$/, ''))
           dispatch({ type: 'ADD_TRACK', payload: track })
         } catch (err) {
           console.error('Failed to load file:', err)
         }
       }
+      const state = useEditorStore.getState()
+      const containerWidth = containerRef.current?.clientWidth ?? 800
+      const maxDuration = Math.max(...state.tracks.filter(t => t.buffer).map(t => t.buffer!.duration), 1)
+      const newZoom = Math.min(500, Math.max(20, (containerWidth - 20) / maxDuration))
+      dispatch({ type: 'SET_ZOOM', payload: newZoom })
+      dispatch({ type: 'SET_SCROLL', payload: { x: 0 } })
     }
     input.click()
   }
@@ -257,48 +291,23 @@ function App() {
   }
 
   const handleCopy = () => {
-    if (!selection || !selectedTrack) return
-    const track = tracks.find(t => t.id === selectedTrack)
-    if (!track?.buffer) return
-    const sr = track.buffer.sampleRate
-    const startSample = Math.floor(selection.start * sr)
-    const endSample = Math.floor(selection.end * sr)
-    const region = extractRegion(track.buffer, startSample, endSample)
-    dispatch({ type: 'SET_CLIPBOARD', payload: region })
+    clipboardCopy()
   }
 
   const handleCut = () => {
-    handleCopy()
-    handleDelete()
+    clipboardCut()
   }
 
   const handlePaste = () => {
-    if (!clipboard || !selectedTrack) return
-    const track = tracks.find(t => t.id === selectedTrack)
-    if (!track?.buffer) return
-    const insertSample = Math.floor(cursorPosition * track.buffer.sampleRate)
-    const newBuffer = insertRegion(track.buffer, clipboard, insertSample)
-    dispatch({ type: 'PUSH_UNDO', payload: 'Paste' })
-    dispatch({ type: 'SET_TRACK_BUFFER', payload: { id: selectedTrack, buffer: newBuffer } })
+    clipboardPaste()
   }
 
   const handleDelete = () => {
-    if (!selection || !selectedTrack) return
-    const track = tracks.find(t => t.id === selectedTrack)
-    if (!track?.buffer) return
-    const sr = track.buffer.sampleRate
-    const startSample = Math.floor(selection.start * sr)
-    const endSample = Math.floor(selection.end * sr)
-    const newBuffer = deleteRegion(track.buffer, startSample, endSample)
-    dispatch({ type: 'PUSH_UNDO', payload: 'Delete' })
-    dispatch({ type: 'SET_TRACK_BUFFER', payload: { id: selectedTrack, buffer: newBuffer } })
-    dispatch({ type: 'SET_SELECTION', payload: null })
+    clipboardDelete()
   }
 
   const handleSelectAll = () => {
-    const track = tracks.find(t => t.id === selectedTrack) || tracks[0]
-    if (!track?.buffer) return
-    dispatch({ type: 'SET_SELECTION', payload: { start: 0, end: track.buffer.duration, trackId: track.id } })
+    selectAll()
   }
 
   const handleSplitAtCursor = () => {

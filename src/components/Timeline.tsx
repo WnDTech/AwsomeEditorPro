@@ -4,6 +4,7 @@ import { formatTime } from '../utils/helpers'
 
 export function Timeline() {
   const canvasRef = useRef<HTMLCanvasElement>(null)
+  const isScrubbing = useRef(false)
   const { duration, zoom, scrollX, dispatch, markers } = useEditorStore()
 
   const draw = useCallback(() => {
@@ -88,19 +89,63 @@ export function Timeline() {
     return () => observer.disconnect()
   }, [draw])
 
-  const handleClick = (e: React.MouseEvent) => {
+  const getTimeFromEvent = (e: React.MouseEvent): number => {
     const rect = canvasRef.current?.getBoundingClientRect()
-    if (!rect) return
+    if (!rect) return 0
     const x = e.clientX - rect.left + scrollX
-    const time = x / zoom
+    return Math.max(0, x / zoom)
+  }
+
+  const handleMouseDown = (e: React.MouseEvent) => {
+    if (e.button !== 0) return
+    isScrubbing.current = true
+    const time = getTimeFromEvent(e)
     dispatch({ type: 'SET_CURSOR', payload: time })
   }
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (!isScrubbing.current) return
+    const time = getTimeFromEvent(e)
+    dispatch({ type: 'SET_CURSOR', payload: time })
+  }
+
+  const handleMouseUp = () => {
+    isScrubbing.current = false
+  }
+
+  useEffect(() => {
+    const handleGlobalMouseUp = () => { isScrubbing.current = false }
+    window.addEventListener('mouseup', handleGlobalMouseUp)
+    return () => window.removeEventListener('mouseup', handleGlobalMouseUp)
+  }, [])
+
+  useEffect(() => {
+    const el = canvasRef.current
+    if (!el) return
+    const handleWheel = (e: WheelEvent) => {
+      e.preventDefault()
+      const state = useEditorStore.getState()
+      if (e.ctrlKey || e.metaKey) {
+        const zoomDelta = e.deltaY > 0 ? 0.9 : 1.1
+        const newZoom = Math.min(500, Math.max(20, Math.round(state.zoom * zoomDelta)))
+        state.dispatch({ type: 'SET_ZOOM', payload: newZoom })
+      } else {
+        const delta = Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY
+        const newScrollX = Math.max(0, state.scrollX + delta)
+        state.dispatch({ type: 'SET_SCROLL', payload: { x: newScrollX } })
+      }
+    }
+    el.addEventListener('wheel', handleWheel, { passive: false })
+    return () => el.removeEventListener('wheel', handleWheel)
+  }, [])
 
   return (
     <canvas
       ref={canvasRef}
       className="w-full h-6 cursor-pointer"
-      onClick={handleClick}
+      onMouseDown={handleMouseDown}
+      onMouseMove={handleMouseMove}
+      onMouseUp={handleMouseUp}
     />
   )
 }

@@ -5,6 +5,7 @@ import { readAudioFile } from '../audio/AudioFileIO'
 import { createTrack } from '../store/editorStore'
 import { downloadWav } from '../audio/AudioFileIO'
 import { applyEffectToSelection } from '../hooks/useAudioEngine'
+import { clipboardCopy, clipboardCut, clipboardPaste, clipboardDelete, selectAll } from '../hooks/useClipboard'
 import { EffectParamDef } from '../types'
 
 interface MenuItem {
@@ -185,7 +186,7 @@ export function getGenerateDialogDef(effectType: string) {
 export function MenuBar() {
   const [openMenu, setOpenMenu] = useState<number | null>(null)
   const menuBarRef = useRef<HTMLDivElement>(null)
-  const { tracks, dispatch, selectedTrack, selection, cursorPosition, transport } = useEditorStore()
+  const { tracks, dispatch, selectedTrack, selection, cursorPosition, transport, clipboard } = useEditorStore()
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -197,6 +198,9 @@ export function MenuBar() {
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
+  const hasSelection = !!selection && selection.start !== selection.end
+  const hasClipboard = !!clipboard
+
   const handleOpenFile = async () => {
     const input = document.createElement('input')
     input.type = 'file'
@@ -207,7 +211,8 @@ export function MenuBar() {
       for (const file of Array.from(input.files)) {
         try {
           const { buffer, name } = await readAudioFile(file)
-          const track = createTrack(tracks, buffer, name.replace(/\.[^/.]+$/, ''))
+          const currentTracks = useEditorStore.getState().tracks
+          const track = createTrack(currentTracks, buffer, name.replace(/\.[^/.]+$/, ''))
           dispatch({ type: 'ADD_TRACK', payload: track })
         } catch (err) {
           console.error('Failed to load file:', err)
@@ -259,12 +264,6 @@ export function MenuBar() {
     }
   }
 
-  const handleSelectAll = () => {
-    const track = tracks.find(t => t.id === selectedTrack) || tracks[0]
-    if (!track?.buffer) return
-    dispatch({ type: 'SET_SELECTION', payload: { start: 0, end: track.buffer.duration, trackId: track.id } })
-  }
-
   const openToolDialog = (dialogType: string, name: string) => {
     dispatch({
       type: 'SET_ACTIVE_DIALOG',
@@ -293,9 +292,13 @@ export function MenuBar() {
         { label: 'Undo', accelerator: 'Ctrl+Z', action: () => dispatch({ type: 'UNDO' }) },
         { label: 'Redo', accelerator: 'Ctrl+Shift+Z', action: () => dispatch({ type: 'REDO' }) },
         { separator: true, label: '' },
-        { label: 'Select All', accelerator: 'Ctrl+A', action: handleSelectAll, disabled: !hasTrack },
+        { label: 'Cut', accelerator: 'Ctrl+X', action: clipboardCut, disabled: !hasSelection },
+        { label: 'Copy', accelerator: 'Ctrl+C', action: clipboardCopy, disabled: !hasSelection },
+        { label: 'Paste', accelerator: 'Ctrl+V', action: clipboardPaste, disabled: !hasClipboard },
         { separator: true, label: '' },
-        { label: 'Delete Selection', accelerator: 'Del', disabled: !selection },
+        { label: 'Delete Selection', accelerator: 'Del', action: clipboardDelete, disabled: !hasSelection },
+        { separator: true, label: '' },
+        { label: 'Select All', accelerator: 'Ctrl+A', action: selectAll, disabled: !hasTrack },
       ],
     },
     {

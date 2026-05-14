@@ -3,9 +3,10 @@ import { audioEngine } from '../audio/AudioEngine'
 import { readAudioFile } from '../audio/AudioFileIO'
 import { createTrack } from '../store/editorStore'
 import { generateId } from '../utils/helpers'
+import { clipboardCopy, clipboardCut, clipboardPaste } from '../hooks/useClipboard'
 
 export function Toolbar({ onOpenFile }: { onOpenFile: () => void }) {
-  const { tracks, dispatch, selectedTrack, transport, cursorPosition, selection, zoom } = useEditorStore()
+  const { tracks, dispatch, selectedTrack, transport, cursorPosition, selection, zoom, clipboard } = useEditorStore()
 
   const handleAddTrack = () => {
     const track = createTrack(tracks)
@@ -117,6 +118,8 @@ export function Toolbar({ onOpenFile }: { onOpenFile: () => void }) {
   }
 
   const hasTrack = !!tracks.find(t => t.id === selectedTrack)?.buffer
+  const hasSelection = !!selection && selection.start !== selection.end
+  const hasClipboard = !!clipboard
 
   return (
     <div className="h-10 bg-surface-300 border-b border-surface-50/50 flex items-center px-2 gap-1">
@@ -125,6 +128,18 @@ export function Toolbar({ onOpenFile }: { onOpenFile: () => void }) {
       </button>
       <button className="btn-icon" onClick={handleAddTrack} title="Add Empty Track">
         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
+      </button>
+
+      <div className="w-px h-6 bg-surface-50/50 mx-1" />
+
+      <button className="btn-icon" onClick={clipboardCut} title="Cut (Ctrl+X)" disabled={!hasSelection}>
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.121 14.121L19 19m-7-7l7-7m-7 7l-2.879 2.879M12 12L9.121 9.121m0 5.758a3 3 0 10-4.243 4.243 3 3 0 004.243-4.243zm0-5.758a3 3 0 10-4.243-4.243 3 3 0 004.243 4.243z" /></svg>
+      </button>
+      <button className="btn-icon" onClick={clipboardCopy} title="Copy (Ctrl+C)" disabled={!hasSelection}>
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
+      </button>
+      <button className="btn-icon" onClick={clipboardPaste} title="Paste (Ctrl+V)" disabled={!hasClipboard}>
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" /></svg>
       </button>
 
       <div className="w-px h-6 bg-surface-50/50 mx-1" />
