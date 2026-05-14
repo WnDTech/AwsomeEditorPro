@@ -1,0 +1,91 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body, #root {
+  height: 100%;
+  overflow: hidden;
+  background: #0f1117;
+  color: #e2e8f0;
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #14161c;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #2a2d35;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #3a3d45;
+}
+
+input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  background: transparent;
+  cursor: pointer;
+}
+
+input[type="range"]::-webkit-slider-track {
+  height: 4px;
+  background: #2a2d35;
+  border-radius: 2px;
+}
+
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  background: #6366f1;
+  border-radius: 50%;
+  margin-top: -5px;
+}
+
+.btn-icon {
+  @apply flex items-center justify-center w-8 h-8 rounded transition-colors;
+}
+
+.btn-icon:hover:not(:disabled) {
+  @apply bg-surface-50;
+}
+
+.btn-icon:disabled {
+  @apply opacity-30 cursor-not-allowed;
+}
+
+.btn-primary {
+  @apply px-4 py-1.5 bg-accent hover:bg-accent-light rounded text-white text-sm font-medium transition-colors;
+}
+
+.btn-secondary {
+  @apply px-4 py-1.5 bg-surface-50 hover:bg-surface-100 rounded text-gray-300 text-sm font-medium transition-colors;
+}
+
+.panel {
+  @apply bg-surface-300 border border-surface-50/50 rounded;
+}
+
+@keyframes pulse-recording {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+
+.recording-indicator {
+  animation: pulse-recording 1s infinite;
+}
