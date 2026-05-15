@@ -34,6 +34,14 @@ Apply to a selected region or the entire track:
 | **Fades & Utility** | Fade In, Fade Out, Invert, Reverse |
 | **Equalizer** | 5-Band EQ (60Hz, 250Hz, 1kHz, 4kHz, 12kHz) |
 
+### AI Features
+- **AI Voice Removal** — Remove vocals from stereo or mono audio using machine learning
+  - **NMF (Non-negative Matrix Factorization)** — Unsupervised learning algorithm that decomposes the spectrogram into vocal and instrumental spectral templates
+  - **Neural Network Mask Refinement** — 3-layer feed-forward network (Dense → ReLU → Dense → Sigmoid) that refines separation masks
+  - **Mid/Side Coherence Analysis** — Stereo field analysis to identify center-panned vocals
+  - Accessible from toolbar AI dropdown, right-click context menu, AI menu bar, and Effects panel
+  - Progress UI with phase indicators and animated progress bar
+
 ### Audio Generation
 Generate **Silence, Tones, White Noise, DTMF Tones**, and **Frequency Sweeps** with configurable parameters.
 
@@ -137,6 +145,7 @@ Output binaries are placed in `release/` (NSIS installer + Portable for Windows 
 ```
 ├── electron/          # Electron main & preload scripts
 ├── src/
+│   ├── ai/            # AI voice separation (NMF, neural network)
 │   ├── audio/         # AudioEngine, AudioEffects, AudioFileIO
 │   ├── components/    # React UI components
 │   ├── hooks/         # useAudioEngine hook
