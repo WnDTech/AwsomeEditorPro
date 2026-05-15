@@ -249,6 +249,21 @@ export function TrackLane({ track, isSelected }: TrackLaneProps) {
     setContextMenu(null)
   }
 
+  const handleCtxAIVoiceRemoval = () => {
+    dispatch({
+      type: 'SET_ACTIVE_DIALOG',
+      payload: {
+        type: 'effect',
+        effectType: 'voiceremoval',
+        name: 'AI - Voice Removal',
+        params: [
+          { key: 'strength', label: 'Strength', min: 0, max: 1, step: 0.05, defaultValue: 1, unit: '' },
+        ],
+      },
+    })
+    setContextMenu(null)
+  }
+
   const currentState = useEditorStore.getState()
   const hasSelection = currentState.selection && currentState.selection.trackId === track.id && currentState.selection.start !== currentState.selection.end
   const hasClipboard = !!currentState.clipboard
@@ -344,6 +359,9 @@ export function TrackLane({ track, isSelected }: TrackLaneProps) {
           <div className="h-px bg-surface-50/30 my-1 mx-2" />
           <ContextMenuButton label={track.muted ? 'Unmute' : 'Mute'} onClick={() => { handleMuteToggle(); setContextMenu(null) }} />
           <ContextMenuButton label={track.solo ? 'Unsolo' : 'Solo'} onClick={() => { handleSoloToggle(); setContextMenu(null) }} />
+          <div className="h-px bg-surface-50/30 my-1 mx-2" />
+          <div className="px-3 py-1 text-[9px] text-gray-600 uppercase tracking-wider">AI</div>
+          <ContextMenuButton label="AI - Voice Removal..." onClick={handleCtxAIVoiceRemoval} disabled={!track.buffer} />
           <div className="h-px bg-surface-50/30 my-1 mx-2" />
           <ContextMenuButton label="Delete Track" danger onClick={handleCtxDeleteTrack} />
         </div>,

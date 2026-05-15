@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import { AudioTrack, EditorState, EditorAction, ViewMode, Selection, TransportState, ActiveDialog, PasteMode, Marker } from '../types'
+import { AudioTrack, EditorState, EditorAction, ViewMode, Selection, TransportState, ActiveDialog, PasteMode, Marker, AIStatus } from '../types'
 import { generateId, getNextTrackColor } from '../utils/helpers'
 
 const initialTransport: TransportState = {
@@ -33,6 +33,7 @@ const initialState: EditorState = {
   pasteMode: 'insert' as PasteMode,
   markers: [] as Marker[],
   activeDialog: null,
+  aiStatus: null as AIStatus | null,
 }
 
 export const useEditorStore = create<EditorState & { dispatch: (action: EditorAction) => void }>((set, get) => ({
@@ -158,6 +159,10 @@ export const useEditorStore = create<EditorState & { dispatch: (action: EditorAc
 
       case 'SET_ACTIVE_DIALOG':
         set({ activeDialog: action.payload })
+        break
+
+      case 'SET_AI_STATUS':
+        set({ aiStatus: action.payload })
         break
 
       case 'SET_PASTE_MODE':

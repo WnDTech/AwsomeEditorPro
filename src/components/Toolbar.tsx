@@ -1,3 +1,4 @@
+import { useState, useRef, useEffect } from 'react'
 import { useEditorStore } from '../store/editorStore'
 import { audioEngine } from '../audio/AudioEngine'
 import { readAudioFile } from '../audio/AudioFileIO'
@@ -191,6 +192,10 @@ export function Toolbar({ onOpenFile }: { onOpenFile: () => void }) {
 
       <ZoomControl />
 
+      <div className="w-px h-6 bg-surface-50/50 mx-1" />
+
+      <AIDropdown />
+
       <div className="flex-1" />
 
       {transport.isRecording && (
@@ -219,6 +224,80 @@ function ZoomControl() {
         className="w-24"
       />
       <span className="text-xs text-gray-400 w-8">{zoom}px/s</span>
+    </div>
+  )
+}
+
+function AIDropdown() {
+  const [isOpen, setIsOpen] = useState(false)
+  const menuRef = useRef<HTMLDivElement>(null)
+  const { selectedTrack, tracks, dispatch } = useEditorStore()
+  const track = tracks.find(t => t.id === selectedTrack)
+  const hasTrack = !!track?.buffer
+
+  useEffect(() => {
+    if (!isOpen) return
+    const handleClickOutside = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setIsOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [isOpen])
+
+  const handleVoiceRemoval = () => {
+    if (!hasTrack) return
+    dispatch({
+      type: 'SET_ACTIVE_DIALOG',
+      payload: {
+        type: 'effect',
+        effectType: 'voiceremoval',
+        name: 'AI - Voice Removal',
+        params: [
+          { key: 'strength', label: 'Strength', min: 0, max: 1, step: 0.05, defaultValue: 1, unit: '' },
+        ],
+      },
+    })
+    setIsOpen(false)
+  }
+
+  return (
+    <div className="relative" ref={menuRef}>
+      <button
+        className={`flex items-center gap-1 px-2 py-1 rounded text-xs font-medium transition-colors ${
+          isOpen ? 'bg-purple-600 text-white' : 'text-purple-400 hover:bg-purple-600/20 hover:text-purple-300'
+        }`}
+        onClick={() => setIsOpen(!isOpen)}
+        disabled={!hasTrack}
+      >
+        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+        </svg>
+        AI
+        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+        </svg>
+      </button>
+
+      {isOpen && (
+        <div className="absolute top-full left-0 mt-1 bg-surface-300 border border-surface-50/50 rounded-lg shadow-2xl py-1 min-w-[200px] z-50">
+          <div className="px-3 py-1 text-[9px] text-gray-600 uppercase tracking-wider">AI Editing</div>
+          <button
+            className={`w-full flex items-center gap-2 px-3 py-1.5 text-xs transition-colors ${
+              hasTrack ? 'text-gray-300 hover:bg-accent hover:text-white' : 'text-gray-600 cursor-default'
+            }`}
+            onClick={handleVoiceRemoval}
+            disabled={!hasTrack}
+          >
+            <svg className="w-3.5 h-3.5 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3l14 14" />
+            </svg>
+            Voice Removal
+          </button>
+        </div>
+      )}
     </div>
   )
 }

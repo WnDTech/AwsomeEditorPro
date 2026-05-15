@@ -119,6 +119,12 @@ const effectDialogDefs: Record<string, { name: string; params: EffectParamDef[] 
       { key: 'depth', label: 'Depth', min: 0.001, max: 0.01, step: 0.001, defaultValue: 0.003, unit: 's' },
     ],
   },
+  voiceremoval: {
+    name: 'AI - Voice Removal',
+    params: [
+      { key: 'strength', label: 'Strength', min: 0, max: 1, step: 0.05, defaultValue: 1, unit: '' },
+    ],
+  },
 }
 
 const toolItems = [
@@ -128,6 +134,10 @@ const toolItems = [
   { id: 'resample', name: 'Resample', icon: '&#128257;', dialogType: 'resample' as const },
   { id: 'mix-paste', name: 'Mix Paste', icon: '&#128203;', dialogType: 'mix-paste' as const },
   { id: 'crossfade', name: 'Crossfade', icon: '&#10566;', dialogType: 'crossfade' as const },
+]
+
+const aiEffects = [
+  { id: 'voiceremoval', name: 'Voice Removal', icon: '&#127908;', hasDialog: true },
 ]
 
 const effects = [
@@ -210,6 +220,19 @@ export function EffectsPanel() {
           >
             <span className="text-xs" dangerouslySetInnerHTML={{ __html: tool.icon }} />
             <span className="flex-1">{tool.name}</span>
+          </button>
+        ))}
+        <div className="text-[9px] text-gray-600 uppercase tracking-wider mt-2 mb-1 px-1">AI</div>
+        {aiEffects.map(fx => (
+          <button
+            key={fx.id}
+            className="w-full flex items-center gap-2 px-2 py-1.5 rounded text-sm text-purple-400 hover:bg-purple-600/20 hover:text-purple-300 transition-colors text-left disabled:text-gray-600 disabled:hover:bg-transparent disabled:hover:text-gray-600"
+            onClick={() => handleEffectClick(fx.id, fx.hasDialog)}
+            disabled={!track?.buffer}
+          >
+            <span className="text-xs" dangerouslySetInnerHTML={{ __html: fx.icon }} />
+            <span className="flex-1">{fx.name}</span>
+            {fx.hasDialog && <span className="text-[10px] text-gray-600">...</span>}
           </button>
         ))}
         <div className="text-[9px] text-gray-600 uppercase tracking-wider mt-2 mb-1 px-1">Effects</div>

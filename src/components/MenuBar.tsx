@@ -138,6 +138,12 @@ const effectDialogDefs: Record<string, { name: string; params: EffectParamDef[] 
       { key: 'depth', label: 'Depth', min: 0.001, max: 0.01, step: 0.001, defaultValue: 0.003, unit: 's' },
     ],
   },
+  voiceremoval: {
+    name: 'AI - Voice Removal',
+    params: [
+      { key: 'strength', label: 'Strength', min: 0, max: 1, step: 0.05, defaultValue: 1, unit: '' },
+    ],
+  },
 }
 
 const generateDialogDefs: Record<string, { name: string; params: EffectParamDef[] }> = {
@@ -361,6 +367,12 @@ export function MenuBar() {
         { separator: true, label: '' },
         { label: 'Invert', action: () => applyEffectToSelection('invert'), disabled: !hasTrack },
         { label: 'Reverse', action: () => applyEffectToSelection('reverse'), disabled: !hasTrack },
+      ],
+    },
+    {
+      label: 'AI',
+      items: [
+        { label: 'Voice Removal...', action: () => openEffectDialog('voiceremoval'), disabled: !hasTrack },
       ],
     },
     {

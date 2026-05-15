@@ -74,6 +74,7 @@ export type EffectType =
   | 'speedchange'
   | 'tremolo'
   | 'vibrato'
+  | 'voiceremoval'
 
 export type ViewMode = 'waveform' | 'spectral' | 'split'
 
@@ -104,6 +105,11 @@ export interface ActiveDialog {
   params: EffectParamDef[]
 }
 
+export interface AIStatus {
+  phase: string
+  percent: number
+}
+
 export interface EditorState {
   tracks: AudioTrack[]
   selectedTrack: string | null
@@ -125,6 +131,7 @@ export interface EditorState {
   pasteMode: PasteMode
   markers: Marker[]
   activeDialog: ActiveDialog | null
+  aiStatus: AIStatus | null
 }
 
 export interface UndoEntry {
@@ -154,6 +161,7 @@ export type EditorAction =
   | { type: 'SET_ACTIVE_DIALOG'; payload: ActiveDialog | null }
   | { type: 'SET_PASTE_MODE'; payload: PasteMode }
   | { type: 'SET_SNAP_TO_ZERO'; payload: boolean }
+  | { type: 'SET_AI_STATUS'; payload: AIStatus | null }
   | { type: 'ADD_MARKER'; payload: Marker }
   | { type: 'REMOVE_MARKER'; payload: string }
   | { type: 'UPDATE_MARKER'; payload: { id: string; changes: Partial<Marker> } }

@@ -20,6 +20,8 @@ import {
   applySpeedChange,
   applyTremolo,
   applyVibrato,
+  applyVoiceRemoval,
+  AIProgressCallback,
   extractRegion,
   generateSilence,
   generateTone,
@@ -118,6 +120,9 @@ export async function applyEffectToSelection(effectType: string, params?: Record
       case 'vibrato':
         processed = await applyVibrato(region, params?.rate ?? 5, params?.depth ?? 0.003)
         break
+      case 'voiceremoval':
+        processed = await applyVoiceRemoval(region, params?.strength ?? 1, makeAIProgress(dispatch))
+        break
       default:
         return
     }
@@ -202,6 +207,9 @@ export async function applyEffectToSelection(effectType: string, params?: Record
       case 'vibrato':
         processed = await applyVibrato(buffer, params?.rate ?? 5, params?.depth ?? 0.003)
         break
+      case 'voiceremoval':
+        processed = await applyVoiceRemoval(buffer, params?.strength ?? 1, makeAIProgress(dispatch))
+        break
       default:
         return
     }
@@ -271,4 +279,10 @@ function replaceRegion(
     }
   }
   return newBuffer
+}
+
+function makeAIProgress(dispatch: (a: any) => void): AIProgressCallback {
+  return (phase: string, percent: number) => {
+    dispatch({ type: 'SET_AI_STATUS', payload: { phase, percent } })
+  }
 }

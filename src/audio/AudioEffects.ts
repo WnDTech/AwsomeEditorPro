@@ -663,6 +663,9 @@ export async function generateDTMF(
   return buffer
 }
 
+export { aiVoiceSeparation as applyVoiceRemoval } from '../ai/VoiceSeparation'
+export type { AIProgressCallback } from '../ai/VoiceSeparation'
+
 export async function generateSweep(
   startFreq: number = 20,
   endFreq: number = 20000,
