@@ -22,6 +22,7 @@ import { createTrack } from './store/editorStore'
 import { applyEffectToSelection, applyGenerate } from './hooks/useAudioEngine'
 import { clipboardCopy, clipboardCut, clipboardPaste, clipboardDelete, selectAll } from './hooks/useClipboard'
 import { extractRegion } from './audio/AudioEffects'
+import { getEffectDialogDef, getGenerateDialogDef } from './components/MenuBar'
 import { generateId } from './utils/helpers'
 
 function App() {
@@ -180,6 +181,22 @@ function App() {
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [tracks, selection, selectedTrack, clipboard, cursorPosition, transport])
 
+  const openEffectDialog = (effectType: string) => {
+    const def = getEffectDialogDef(effectType)
+    if (def) {
+      dispatch({ type: 'SET_ACTIVE_DIALOG', payload: { type: 'effect', effectType, name: def.name, params: def.params } })
+    } else {
+      applyEffectToSelection(effectType)
+    }
+  }
+
+  const openGenerateDialog = (generateType: string) => {
+    const def = getGenerateDialogDef(generateType)
+    if (def) {
+      dispatch({ type: 'SET_ACTIVE_DIALOG', payload: { type: 'generate', effectType: generateType, name: def.name, params: def.params } })
+    }
+  }
+
   useEffect(() => {
     const api = (window as any).electronAPI
     if (!api) return
@@ -200,32 +217,32 @@ function App() {
       'menu:paste': () => handlePaste(),
       'menu:delete': () => handleDelete(),
       'menu:select-all': () => handleSelectAll(),
-      'menu:fx-amplify': () => applyEffectToSelection('amplify', { gainDb: 6 }),
-      'menu:fx-normalize': () => applyEffectToSelection('normalize', { targetDb: -1 }),
+      'menu:fx-amplify': () => openEffectDialog('amplify'),
+      'menu:fx-normalize': () => openEffectDialog('normalize'),
       'menu:fx-fadein': () => applyEffectToSelection('fadein'),
       'menu:fx-fadeout': () => applyEffectToSelection('fadeout'),
-      'menu:fx-eq': () => {},
-      'menu:fx-compressor': () => applyEffectToSelection('compressor'),
-      'menu:fx-reverb': () => applyEffectToSelection('reverb'),
-      'menu:fx-delay': () => {},
-      'menu:fx-chorus': () => {},
-      'menu:fx-flanger': () => {},
-      'menu:fx-phaser': () => {},
-      'menu:fx-distortion': () => {},
-      'menu:fx-pitchshift': () => {},
-      'menu:fx-timestretch': () => {},
-      'menu:fx-noisegate': () => {},
-      'menu:fx-speedchange': () => {},
-      'menu:fx-tremolo': () => {},
-      'menu:fx-vibrato': () => {},
-      'menu:fx-noisereduction': () => {},
+      'menu:fx-eq': () => openEffectDialog('eq'),
+      'menu:fx-compressor': () => openEffectDialog('compressor'),
+      'menu:fx-reverb': () => openEffectDialog('reverb'),
+      'menu:fx-delay': () => openEffectDialog('delay'),
+      'menu:fx-chorus': () => openEffectDialog('chorus'),
+      'menu:fx-flanger': () => openEffectDialog('flanger'),
+      'menu:fx-phaser': () => openEffectDialog('phaser'),
+      'menu:fx-distortion': () => openEffectDialog('distortion'),
+      'menu:fx-pitchshift': () => openEffectDialog('pitchshift'),
+      'menu:fx-timestretch': () => openEffectDialog('timestretch'),
+      'menu:fx-noisegate': () => openEffectDialog('noisegate'),
+      'menu:fx-speedchange': () => openEffectDialog('speedchange'),
+      'menu:fx-tremolo': () => openEffectDialog('tremolo'),
+      'menu:fx-vibrato': () => openEffectDialog('vibrato'),
+      'menu:fx-noisereduction': () => applyEffectToSelection('noisereduction'),
       'menu:fx-invert': () => applyEffectToSelection('invert'),
       'menu:fx-reverse': () => applyEffectToSelection('reverse'),
-      'menu:gen-silence': () => {},
-      'menu:gen-tone': () => {},
-      'menu:gen-noise': () => {},
-      'menu:gen-dtmf': () => {},
-      'menu:gen-sweep': () => {},
+      'menu:gen-silence': () => openGenerateDialog('generate-silence'),
+      'menu:gen-tone': () => openGenerateDialog('generate-tone'),
+      'menu:gen-noise': () => openGenerateDialog('generate-noise'),
+      'menu:gen-dtmf': () => openGenerateDialog('generate-dtmf'),
+      'menu:gen-sweep': () => openGenerateDialog('generate-sweep'),
       'menu:view-waveform': () => dispatch({ type: 'SET_VIEW_MODE', payload: 'waveform' }),
       'menu:view-spectral': () => dispatch({ type: 'SET_VIEW_MODE', payload: 'spectral' }),
       'menu:tool-split': () => handleSplitAtCursor(),

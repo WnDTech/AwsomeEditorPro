@@ -6,6 +6,8 @@ import { createTrack } from '../store/editorStore'
 import { downloadWav } from '../audio/AudioFileIO'
 import { applyEffectToSelection } from '../hooks/useAudioEngine'
 import { clipboardCopy, clipboardCut, clipboardPaste, clipboardDelete, selectAll } from '../hooks/useClipboard'
+import { extractRegion } from '../audio/AudioEffects'
+import { generateId } from '../utils/helpers'
 import { EffectParamDef } from '../types'
 
 interface MenuItem {
@@ -279,6 +281,115 @@ export function MenuBar() {
 
   const hasTrack = !!tracks.find(t => t.id === selectedTrack)?.buffer || !!tracks[0]?.buffer
 
+  const handleSplitAtCursor = () => {
+    if (!selectedTrack) return
+    const track = tracks.find(t => t.id === selectedTrack)
+    if (!track?.buffer) return
+    const splitSample = Math.floor(cursorPosition * track.buffer.sampleRate)
+    if (splitSample <= 0 || splitSample >= track.buffer.length) return
+    const sr = track.buffer.sampleRate
+    const ch = track.buffer.numberOfChannels
+    const ctx1 = new OfflineAudioContext(ch, splitSample, sr)
+    const buf1 = ctx1.createBuffer(ch, splitSample, sr)
+    const ctx2 = new OfflineAudioContext(ch, track.buffer.length - splitSample, sr)
+    const buf2 = ctx2.createBuffer(ch, track.buffer.length - splitSample, sr)
+    for (let c = 0; c < ch; c++) {
+      const src = track.buffer.getChannelData(c)
+      buf1.getChannelData(c).set(src.subarray(0, splitSample))
+      buf2.getChannelData(c).set(src.subarray(splitSample))
+    }
+    dispatch({ type: 'PUSH_UNDO', payload: 'Split' })
+    dispatch({ type: 'SET_TRACK_BUFFER', payload: { id: track.id, buffer: buf1 } })
+    const newTrack = createTrack(tracks, buf2, `${track.name} (2)`)
+    dispatch({ type: 'ADD_TRACK', payload: newTrack })
+  }
+
+  const handleTrimToSelection = () => {
+    if (!selection || !selectedTrack) return
+    const track = tracks.find(t => t.id === selectedTrack)
+    if (!track?.buffer) return
+    const sr = track.buffer.sampleRate
+    const startSample = Math.floor(selection.start * sr)
+    const endSample = Math.floor(selection.end * sr)
+    const region = extractRegion(track.buffer, startSample, endSample)
+    dispatch({ type: 'PUSH_UNDO', payload: 'Trim' })
+    dispatch({ type: 'SET_TRACK_BUFFER', payload: { id: selectedTrack, buffer: region } })
+    dispatch({ type: 'SET_SELECTION', payload: null })
+    dispatch({ type: 'SET_CURSOR', payload: 0 })
+  }
+
+  const handleDuplicate = () => {
+    if (!selectedTrack) return
+    const track = tracks.find(t => t.id === selectedTrack)
+    if (!track?.buffer) return
+    if (selection && selection.trackId === track.id) {
+      const sr = track.buffer.sampleRate
+      const startSample = Math.floor(selection.start * sr)
+      const endSample = Math.floor(selection.end * sr)
+      const region = extractRegion(track.buffer, startSample, endSample)
+      const newTrack = createTrack(tracks, region, `${track.name} (copy)`)
+      dispatch({ type: 'ADD_TRACK', payload: newTrack })
+    } else {
+      const copy = new OfflineAudioContext(track.buffer.numberOfChannels, track.buffer.length, track.buffer.sampleRate)
+      const newBuffer = copy.createBuffer(track.buffer.numberOfChannels, track.buffer.length, track.buffer.sampleRate)
+      for (let ch = 0; ch < track.buffer.numberOfChannels; ch++) {
+        newBuffer.getChannelData(ch).set(track.buffer.getChannelData(ch))
+      }
+      const newTrack = createTrack(tracks, newBuffer, `${track.name} (copy)`)
+      dispatch({ type: 'ADD_TRACK', payload: newTrack })
+    }
+  }
+
+  const handleMixDown = () => {
+    if (tracks.length === 0) return
+    const maxDuration = Math.max(...tracks.filter(t => t.buffer).map(t => t.buffer!.duration))
+    if (maxDuration === 0) return
+    const sr = 44100
+    const totalSamples = Math.ceil(maxDuration * sr)
+    const ctx = new OfflineAudioContext(2, totalSamples, sr)
+    const mixedBuffer = ctx.createBuffer(2, totalSamples, sr)
+    for (const track of tracks) {
+      if (!track.buffer || track.muted) continue
+      for (let ch = 0; ch < Math.min(track.buffer.numberOfChannels, 2); ch++) {
+        const src = track.buffer.getChannelData(Math.min(ch, track.buffer.numberOfChannels - 1))
+        const dst = mixedBuffer.getChannelData(ch)
+        const vol = track.volume
+        for (let i = 0; i < src.length && i < dst.length; i++) {
+          dst[i] += src[i] * vol
+        }
+      }
+    }
+    const mixTrack = createTrack(tracks, mixedBuffer, 'Mix Down')
+    dispatch({ type: 'ADD_TRACK', payload: mixTrack })
+  }
+
+  const handleAddMarker = () => {
+    dispatch({ type: 'ADD_MARKER', payload: { id: generateId(), position: cursorPosition, name: 'Marker', color: '#fbbf24' } })
+  }
+
+  const handleZoomToSelection = () => {
+    const state = useEditorStore.getState()
+    if (!state.selection) return
+    const containerWidth = document.querySelector('[data-track-container]')?.clientWidth ?? 800
+    const sidebarWidth = 192
+    const waveformWidth = containerWidth - sidebarWidth
+    const selDuration = state.selection.end - state.selection.start
+    if (selDuration <= 0) return
+    const newZoom = waveformWidth / selDuration
+    dispatch({ type: 'SET_ZOOM', payload: Math.min(500, Math.max(20, newZoom)) })
+    dispatch({ type: 'SET_SCROLL', payload: { x: state.selection.start * newZoom } })
+  }
+
+  const handleFitToWindow = () => {
+    const maxDuration = Math.max(...tracks.filter(t => t.buffer).map(t => t.buffer!.duration), 1)
+    const containerWidth = document.querySelector('[data-track-container]')?.clientWidth ?? 800
+    const sidebarWidth = 192
+    const waveformWidth = containerWidth - sidebarWidth
+    const newZoom = (waveformWidth - 20) / maxDuration
+    dispatch({ type: 'SET_ZOOM', payload: Math.min(500, Math.max(20, newZoom)) })
+    dispatch({ type: 'SET_SCROLL', payload: { x: 0 } })
+  }
+
   const menus: MenuDef[] = [
     {
       label: 'File',
@@ -321,21 +432,21 @@ export function MenuBar() {
         { label: 'Frequency Analysis...', action: () => openToolDialog('frequency-analysis', 'Frequency Analysis'), disabled: !hasTrack },
         { label: 'Audio Statistics...', action: () => openToolDialog('audio-statistics', 'Audio Statistics'), disabled: !hasTrack },
         { separator: true, label: '' },
-        { label: 'Split at Cursor', accelerator: 'B', action: () => {}, disabled: !hasTrack },
-        { label: 'Trim to Selection', action: () => {}, disabled: !selection },
-        { label: 'Duplicate Selection', accelerator: 'D', action: () => {}, disabled: !hasTrack },
+        { label: 'Split at Cursor', accelerator: 'B', action: handleSplitAtCursor, disabled: !hasTrack },
+        { label: 'Trim to Selection', action: handleTrimToSelection, disabled: !selection },
+        { label: 'Duplicate Selection', accelerator: 'D', action: handleDuplicate, disabled: !hasTrack },
         { label: 'Mix Paste...', action: () => openToolDialog('mix-paste', 'Mix Paste') },
         { label: 'Crossfade...', action: () => openToolDialog('crossfade', 'Crossfade'), disabled: !hasTrack },
         { separator: true, label: '' },
         { label: 'Channel Mixer...', action: () => openToolDialog('channel-mixer', 'Channel Mixer'), disabled: !hasTrack },
         { label: 'Resample...', action: () => openToolDialog('resample', 'Resample'), disabled: !hasTrack },
         { separator: true, label: '' },
-        { label: 'Mix Down to New Track', action: () => {}, disabled: tracks.length === 0 },
+        { label: 'Mix Down to New Track', action: handleMixDown, disabled: tracks.length === 0 },
         { separator: true, label: '' },
-        { label: 'Add Marker at Cursor', accelerator: 'M', action: () => {} },
+        { label: 'Add Marker at Cursor', accelerator: 'M', action: handleAddMarker },
         { separator: true, label: '' },
-        { label: 'Zoom to Selection', action: () => {}, disabled: !selection },
-        { label: 'Fit to Window', action: () => {}, disabled: !hasTrack },
+        { label: 'Zoom to Selection', action: handleZoomToSelection, disabled: !selection },
+        { label: 'Fit to Window', action: handleFitToWindow, disabled: !hasTrack },
       ],
     },
     {
